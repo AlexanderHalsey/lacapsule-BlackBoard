@@ -11,6 +11,12 @@ var usersRouter = require('./routes/users');
 
 var app = express();
 
+app.locals.convertDate = (inputFormat) => {
+  function pad(s) { return (s < 10) ? '0' + s : s; }
+  var d = new Date(inputFormat)
+  return [pad(d.getDate()), pad(d.getMonth()+1), d.getFullYear()].join('/')
+}
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
