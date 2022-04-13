@@ -53,10 +53,40 @@ router.get('/order-page', async function(req, res, next) {
 });
 
 /* GET chart page. */
-router.get('/charts', function(req, res, next) {
-  res.render('charts');
+router.get('/charts', async function(req, res, next) {
+
+  // group users by gender and count
+  var gender_aggregate = UserModel.aggregate();
+  gender_aggregate.group({ _id: "$gender", sexCount: { $sum: 1 } });
+  var gender = await gender_aggregate.exec();
+  gender = JSON.stringify(gender);
+
+  // find admin and count read and unread messages
+  var admin = await UserModel.findById('5c52e4efaa4beef85aad5e52');
+  var messages = {read: 0, unread: 0};
+  for (let message of admin.messages) {
+    if (message.read) messages.read += 1;
+    else messages.unread += 1;
+  }
+  messages = JSON.stringify(messages);
+
+  // find payed orders and group by "sent" "not sent"
+  var payed_aggregate = CommandeModel.aggregate([
+    { $match: { status_payment: "validated" }},
+    { $group: { _id: "$status_shipment", status_shipment: { $sum: 1 } } }
+  ]);
+  var payed = await payed_aggregate.exec();
+  payed = JSON.stringify(payed);
+
+  // find payed orders and split them by month
+  var mt_aggregate = CommandeModel.aggregate([
+    { $match: { status_payment: "validated" }},
+    { $group: { _id: { month: { $month: "$date_payment" } }, monthlyTurnover: { $sum: "$total" } }}
+  ]);
+  var monthly_turnover = await mt_aggregate.exec();
+  monthly_turnover = JSON.stringify(monthly_turnover);
+
+  res.render('charts', { gender, messages, payed, monthly_turnover });
 });
-
-
 
 module.exports = router;
